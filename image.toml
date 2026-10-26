@@ -25,8 +25,10 @@ exclude = [
 ]
 
 # The loader and the mods, as the platform publishes them for a game folder.
-# Its build provenance is checked before it goes into the image.
+# Its build provenance is checked before it goes into the image: built in
+# the repository by the organization's workflow.
 [loader]
 repository = "enshwick/enshwick"
 release = "dev"
 asset = "enshwick.zip"
+signer-workflow = "enshwick/.github/.github/workflows/dev-bundle.yml"

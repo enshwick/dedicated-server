@@ -57,10 +57,12 @@ struct Proton {
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[serde(rename_all = "kebab-case")]
 struct Loader {
     repository: String,
     release: String,
     asset: String,
+    signer_workflow: String,
 }
 
 /// Where the image goes.
@@ -347,6 +349,8 @@ fn fetch_loader(loader: &Loader, work: &Path) -> Result<(PathBuf, String), Strin
             &archive.display().to_string(),
             "--repo",
             &loader.repository,
+            "--signer-workflow",
+            &loader.signer_workflow,
         ]
         .map(str::to_owned),
     )?;
