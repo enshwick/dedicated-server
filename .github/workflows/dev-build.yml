@@ -1,0 +1,25 @@
+# The Windows archive of the commit it runs on, as the rolling `dev`
+# prerelease, until the first public release: run by hand.
+name: dev-build
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: dev-build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    # main: the organization runners run only workflows from main.
+    uses: enshwick/.github/.github/workflows/mod-dev-build.yml@main # zizmor: ignore[unpinned-uses]
+    with:
+      install: >-
+        On a Windows server, extract enshwick-server-windows.zip and run
+        `enshwick-server.exe install` as an administrator.
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write

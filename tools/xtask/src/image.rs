@@ -39,10 +39,16 @@ const SOURCE: &str = "https://github.com/enshwick/dedicated-server";
 /// `image.toml`.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Pins {
+pub(crate) struct Pins {
     base: String,
     proton: Proton,
-    loader: Loader,
+    pub(crate) loader: Loader,
+}
+
+/// Reads `image.toml`.
+pub(crate) fn pins() -> Result<Pins, String> {
+    toml::from_str(&read_text(Path::new("image.toml"))?)
+        .map_err(|error| format!("image.toml: {error}"))
 }
 
 #[derive(Debug, Deserialize)]
@@ -58,7 +64,7 @@ struct Proton {
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[serde(rename_all = "kebab-case")]
-struct Loader {
+pub(crate) struct Loader {
     repository: String,
     release: String,
     asset: String,
@@ -92,8 +98,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), String> {
         destination.output = Some(PathBuf::from("target/image/dedicated-server.tar"));
     }
 
-    let pins: Pins = toml::from_str(&read_text(Path::new("image.toml"))?)
-        .map_err(|error| format!("image.toml: {error}"))?;
+    let pins = pins()?;
     let work = PathBuf::from("target/image");
     let cache = std::env::var_os("ENSHWICK_IMAGE_CACHE")
         .map_or_else(|| PathBuf::from("target/image-cache"), PathBuf::from);
@@ -203,7 +208,7 @@ fn crane_bin() -> String {
 }
 
 /// The time every layer entry carries: `SOURCE_DATE_EPOCH`, or the commit's.
-fn source_date() -> Result<u64, String> {
+pub(crate) fn source_date() -> Result<u64, String> {
     let text = match std::env::var("SOURCE_DATE_EPOCH") {
         Ok(text) => text,
         Err(_) => git(&["log", "-1", "--format=%ct"])?,
@@ -321,7 +326,7 @@ fn repack_proton(archive: &Path, exclude: &[String], out: &Path, mtime: u64) -> 
 
 /// Downloads the loader archive and checks its build provenance; returns
 /// the archive and the commit it was built from.
-fn fetch_loader(loader: &Loader, work: &Path) -> Result<(PathBuf, String), String> {
+pub(crate) fn fetch_loader(loader: &Loader, work: &Path) -> Result<(PathBuf, String), String> {
     let download = work.join("loader-download");
     let _gone = std::fs::remove_dir_all(&download);
     create_dir(&download)?;
@@ -376,7 +381,7 @@ fn fetch_loader(loader: &Loader, work: &Path) -> Result<(PathBuf, String), Strin
 }
 
 /// Extracts the loader archive into a fresh `dir`.
-fn extract(archive: &Path, dir: &Path) -> Result<PathBuf, String> {
+pub(crate) fn extract(archive: &Path, dir: &Path) -> Result<PathBuf, String> {
     let _gone = std::fs::remove_dir_all(dir);
     let file = File::open(archive).map_err(|error| format!("{}: {error}", archive.display()))?;
     zip::ZipArchive::new(file)
@@ -489,7 +494,7 @@ impl Layer {
 }
 
 /// Every file under `root`, relative to it, sorted.
-fn files(root: &Path) -> Result<Vec<PathBuf>, String> {
+pub(crate) fn files(root: &Path) -> Result<Vec<PathBuf>, String> {
     let mut found = Vec::new();
     let mut dirs = vec![PathBuf::new()];
     while let Some(dir) = dirs.pop() {
@@ -541,11 +546,11 @@ fn write_hex(text: &mut String, byte: u8) -> std::fmt::Result {
     write!(text, "{byte:02x}")
 }
 
-fn read_text(path: &Path) -> Result<String, String> {
+pub(crate) fn read_text(path: &Path) -> Result<String, String> {
     std::fs::read_to_string(path).map_err(|error| format!("{}: {error}", path.display()))
 }
 
-fn create_dir(dir: &Path) -> Result<(), String> {
+pub(crate) fn create_dir(dir: &Path) -> Result<(), String> {
     std::fs::create_dir_all(dir).map_err(|error| format!("{}: {error}", dir.display()))
 }
 
@@ -562,7 +567,7 @@ fn git(args: &[&str]) -> Result<String, String> {
 }
 
 /// Runs `program`, showing its errors, and returns what it printed.
-fn run_tool(program: &str, args: &[String]) -> Result<String, String> {
+pub(crate) fn run_tool(program: &str, args: &[String]) -> Result<String, String> {
     let output = Command::new(program)
         .args(args)
         .stderr(std::process::Stdio::inherit())

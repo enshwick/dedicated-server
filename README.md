@@ -1,8 +1,9 @@
 # Enshwick dedicated server
 
 The Enshrouded dedicated server with the
-[Enshwick](https://github.com/enshwick/enshwick) loader, as a container image
-for Linux hosts: `ghcr.io/enshwick/dedicated-server`.
+[Enshwick](https://github.com/enshwick/enshwick) loader: a container image for
+Linux hosts, `ghcr.io/enshwick/dedicated-server`, and a setup program that
+runs it as a Windows service.
 
 Enshrouded's server runs only on Windows, so the image runs it under the Wine
 of a pinned [GE-Proton](https://github.com/GloriousEggroll/proton-ge-custom)
@@ -31,7 +32,31 @@ helm install enshrouded ./charts/dedicated-server --set serverConfig.name="My mo
 
 The image is for x86-64 hosts only.
 
+## Run it on Windows
+
+Download `enshwick-server-windows.zip` from this repository's
+[`dev` prerelease](https://github.com/enshwick/dedicated-server/releases/tag/dev),
+extract it where the server should live, and in an administrator's terminal
+run:
+
+```sh
+enshwick-server.exe install ENSHWICK_SERVER_CONFIG='{"name": "My modded server"}'
+```
+
+`install` downloads SteamCMD and the server beside the program, installs the
+loader, lets the server through Windows Firewall and registers the service
+`enshwick-server`, which starts with Windows. Its log is
+`enshwick-server.log` beside the program. Stopping the service makes the
+server save and quit; Windows restarts it a minute after a crash.
+`enshwick-server.exe install` again replaces the service with new settings;
+`enshwick-server.exe uninstall` removes the service and the firewall rule and
+keeps the server's files. `enshwick-server.exe run` runs the server in the
+terminal instead, until Ctrl+C.
+
 ## Settings
+
+Settings are environment variables, or `NAME=value` arguments after the
+command, which win. The Windows service keeps the ones given to `install`.
 
 | Variable | Default | What it does |
 | --- | --- | --- |
@@ -50,7 +75,9 @@ Wine's own variables (`WINEDEBUG`, `WINEDLLOVERRIDES`, `WINENTSYNC`,
 
 ## The data volume
 
-The container runs as user 1000 and keeps everything under `/data`:
+The container runs as user 1000 and keeps everything under `/data`; on
+Windows the same folders are beside the program (`steamcmd/` instead of
+`prefix/` and `home/`):
 
 | Path | What |
 | --- | --- |
@@ -78,15 +105,17 @@ Wine spends most of its extra time where the server waits for its threads.
   and writes what it finds into `server/logs/enshwick/all.log`: the Wine
   version, the kernel, whether ntsync is there and the CPU limit.
 
-## Build the image
+## Build the image and the archive
 
 ```sh
 cargo xtask image                          # target/image/dedicated-server.tar
 docker load -i target/image/dedicated-server.tar
+cargo xtask dist                           # target/dist/enshwick-server-windows.zip
 ```
 
 `cargo xtask image` needs `crane`, `gh` and `curl`, and no Docker daemon: it
 appends the launcher, Proton and the loader to the base image as layers.
 [`image.toml`](image.toml) pins what goes in. `--loader <zip>` takes a loader
 archive built locally instead of the published one, and `--tag <reference>`
-pushes to a registry.
+pushes to a registry. `cargo xtask dist` builds the Windows program, through
+`cargo xwin` off Windows, and takes `--loader` too.
