@@ -4,6 +4,8 @@
 //! the environment and runs the server under Proton's Wine until a stop
 //! signal, which it turns into the server's own clean shutdown.
 
+#![forbid(unsafe_code)]
+
 #[cfg(unix)]
 mod config;
 #[cfg(unix)]

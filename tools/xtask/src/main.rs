@@ -9,6 +9,8 @@
 //! `cargo xtask image` builds the Linux image without a container engine
 //! (see [`image`]).
 
+#![forbid(unsafe_code)]
+
 mod image;
 
 use std::io::Write as _;
