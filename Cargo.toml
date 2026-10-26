@@ -26,7 +26,7 @@ windows-sys = { version = "0.61.2", features = ["Win32_System_Console"] }
 zip = { version = "9.1.2", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 
 [dev-dependencies]
-tempfile = "3.27.0"
+tempfile = "=3.27.0"
 
 [lints]
 workspace = true
