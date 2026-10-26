@@ -1,0 +1,22 @@
+[graph]
+targets = ["x86_64-pc-windows-msvc", "x86_64-unknown-linux-musl", "x86_64-unknown-linux-gnu"]
+
+[advisories]
+yanked = "deny"
+unmaintained = "workspace"
+
+[licenses]
+allow = ["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "Zlib", "Unicode-3.0"]
+confidence-threshold = 0.9
+
+[bans]
+multiple-versions = "deny"
+# Duplicates allowed on purpose, each with its reason.
+skip = []
+allow-wildcard-paths = true
+wildcards = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

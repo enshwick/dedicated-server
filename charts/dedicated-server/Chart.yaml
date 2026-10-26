@@ -1,0 +1,9 @@
+apiVersion: v2
+name: dedicated-server
+description: An Enshrouded dedicated server with the Enshwick loader, under Proton
+type: application
+version: 0.1.0
+appVersion: edge
+home: https://github.com/enshwick/dedicated-server
+sources:
+  - https://github.com/enshwick/dedicated-server

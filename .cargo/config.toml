@@ -1,0 +1,13 @@
+[alias]
+# Repository tasks, such as the checks before a merge and the image build:
+# tools/xtask.
+xtask = "run --quiet --package xtask --"
+
+[target.x86_64-pc-windows-msvc]
+# A static CRT needs no redistributable on the host.
+rustflags = ["-C", "target-feature=+crt-static", "-C", "target-cpu=x86-64-v2"]
+
+[target.x86_64-unknown-linux-musl]
+# The launcher is pure Rust: Rust's own linker builds it from any host,
+# with no C toolchain for musl.
+linker = "rust-lld"

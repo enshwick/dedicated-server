@@ -1,0 +1,11 @@
+# The commit message rules for committed (github.com/crate-ci/committed),
+# which the git hooks run: a conventional commit header of at most 72
+# characters with one of these types, no final period, no fixup or WIP
+# commits. The hooks also refuse an upper-case subject and angle brackets.
+style = "conventional"
+allowed_types = ["feat", "fix", "perf", "refactor", "docs", "test", "build", "ci", "chore", "revert"]
+subject_length = 72
+line_length = 0
+subject_capitalized = false
+imperative_subject = false
+merge_commit = true

@@ -1,0 +1,6 @@
+[files]
+extend-exclude = ["CHANGELOG.md", "*.lock", "bun.lock"]
+
+[default.extend-words]
+# Keen Games, the game's developer.
+Keen = "Keen"

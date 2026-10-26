@@ -1,0 +1,54 @@
+image:
+  repository: ghcr.io/enshwick/dedicated-server
+  tag: edge
+  pullPolicy: Always
+
+# Bundled mods to turn on, by name; empty runs the loader alone.
+mods: optimizer
+
+# Merged into enshrouded_server.json before every start.
+serverConfig:
+  name: My modded server
+  slotCount: 8
+
+# Whether SteamCMD updates the server on every start.
+update: true
+
+# Extra environment variables, such as WINEDEBUG.
+env: []
+
+service:
+  # LoadBalancer or NodePort: players reach the query port over UDP.
+  type: LoadBalancer
+  port: 15637
+  annotations: {}
+
+persistence:
+  # The server, its saves and the Wine prefix; the game alone takes
+  # several GB.
+  size: 20Gi
+  storageClassName: ""
+
+# The server saves on stop; this is how long Kubernetes waits for it.
+terminationGracePeriodSeconds: 90
+
+resources:
+  requests:
+    cpu: "2"
+    memory: 8Gi
+  limits:
+    memory: 16Gi
+
+# /dev/ntsync from the node (Linux 6.14 or newer, `modprobe ntsync`).
+# A hostPath device needs a privileged container; a device plugin that
+# offers /dev/ntsync is the safer way, through `resources` and `extraVolumes`.
+ntsync:
+  hostPath: false
+
+extraVolumes: []
+extraVolumeMounts: []
+
+nodeSelector:
+  kubernetes.io/arch: amd64
+tolerations: []
+affinity: {}

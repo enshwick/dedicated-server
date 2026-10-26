@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    {{- include "dedicated-server.labels" . | nindent 4 }}
+spec:
+  # One server per release: two would share one world.
+  replicas: 1
+  serviceName: {{ .Release.Name }}
+  selector:
+    matchLabels:
+      {{- include "dedicated-server.labels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "dedicated-server.labels" . | nindent 8 }}
+    spec:
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: server
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: ENSHWICK_MODS
+              value: {{ .Values.mods | quote }}
+            - name: ENSHWICK_SERVER_CONFIG
+              value: {{ .Values.serverConfig | toJson | quote }}
+            - name: ENSHWICK_UPDATE
+              value: {{ .Values.update | quote }}
+            - name: ENSHWICK_STOP_TIMEOUT
+              value: {{ sub .Values.terminationGracePeriodSeconds 10 | quote }}
+            {{- with .Values.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: query
+              containerPort: 15637
+              protocol: UDP
+          {{- if .Values.ntsync.hostPath }}
+          securityContext:
+            privileged: true
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            {{- if .Values.ntsync.hostPath }}
+            - name: ntsync
+              mountPath: /dev/ntsync
+            {{- end }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        {{- if .Values.ntsync.hostPath }}
+        - name: ntsync
+          hostPath:
+            path: /dev/ntsync
+            type: CharDevice
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        {{- with .Values.persistence.storageClassName }}
+        storageClassName: {{ . }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size }}

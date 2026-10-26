@@ -1,9 +1,23 @@
 # Architecture
 
-The image and the setup program install the game's dedicated server through
-SteamCMD and put the loader and the chosen mods beside it. Neither carries
-game files: the server is downloaded on the host.
+The image installs the game's dedicated server through SteamCMD and puts the
+loader and the chosen mods beside it. It carries no game files: the server is
+downloaded on the host.
+
+`enshwick-server` is the image's entry point and its first process. On every
+start it updates the server through SteamCMD, copies the loader and the
+chosen mods from the image into the server, merges `ENSHWICK_SERVER_CONFIG`
+into the server's configuration, and runs the server under Proton's Wine. A
+stop signal reaches the server as `SIGINT`, on which it saves and quits.
+
+The image is built without a container engine: `cargo xtask image` repacks
+the pinned sources into layers and appends them to the base image with
+`crane`, so nothing runs inside the image while it is built.
 
 | Path | What |
 | --- | --- |
-| `README.md` | what this repository is |
+| `src/` | `enshwick-server`, the launcher |
+| `tools/xtask/` | `cargo xtask check`, the checks before a merge; `cargo xtask image`, the image |
+| `image.toml` | the pinned base image, Proton build and loader release |
+| `compose.yaml` | the image with Docker Compose |
+| `charts/dedicated-server/` | the image on Kubernetes, as a Helm chart |
