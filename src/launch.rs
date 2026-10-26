@@ -59,7 +59,7 @@ pub(crate) fn run(
     let wine = settings.proton.join("files/bin/wine");
     let child = Command::new(&wine)
         .arg("enshrouded_server.exe")
-        .current_dir(&layout.server)
+        .current_dir(layout.server())
         .envs(wine_env(settings, layout, |name| std::env::var(name).ok()))
         .spawn()
         .map_err(|error| format!("starting {}: {error}", wine.display()))?;
@@ -157,8 +157,11 @@ fn wine_env(
         None => DLL_OVERRIDES.to_owned(),
     };
     vec![
-        ("HOME".to_owned(), layout.home.display().to_string()),
-        ("WINEPREFIX".to_owned(), layout.prefix.display().to_string()),
+        ("HOME".to_owned(), layout.home().display().to_string()),
+        (
+            "WINEPREFIX".to_owned(),
+            layout.prefix().display().to_string(),
+        ),
         // 64-bit only: the server needs no 32-bit Linux libraries.
         ("WINEARCH".to_owned(), "wow64".to_owned()),
         ("WINEDLLOVERRIDES".to_owned(), overrides),
@@ -181,7 +184,11 @@ mod tests {
                 .find(|(key, _)| *key == name)
                 .map(|(_, value)| (*value).to_owned())
         };
-        let settings = Settings::from_env(lookup).unwrap();
+        let defaults = crate::settings::Defaults {
+            data: "/data".into(),
+            bundle: "/opt/enshwick/bundle".into(),
+        };
+        let settings = Settings::read(&defaults, &[], lookup).unwrap();
         wine_env(&settings, &settings.layout(), lookup)
     }
 

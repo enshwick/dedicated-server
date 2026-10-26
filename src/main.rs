@@ -1,74 +1,128 @@
 //! `enshwick-server` runs an Enshrouded dedicated server with the Enshwick
-//! loader in the Linux image: it updates the server through SteamCMD, puts
-//! the loader and the chosen mods beside it, applies the configuration from
-//! the environment and runs the server under Proton's Wine until a stop
-//! signal, which it turns into the server's own clean shutdown.
+//! loader. On every start it updates the server through SteamCMD, puts the
+//! loader and the chosen mods beside it and applies the configuration from
+//! the settings; then it runs the server until a stop, which it turns into
+//! the server's own clean shutdown.
+//!
+//! In the Linux image it is the entry point and runs the server under
+//! Proton's Wine. On Windows, `install` registers it as a service, and `run`
+//! runs the server in the console.
 
-#![forbid(unsafe_code)]
+#![deny(unsafe_code)]
 
-#[cfg(unix)]
 mod config;
+#[cfg(windows)]
+#[expect(
+    unsafe_code,
+    reason = "Ctrl+C for another process needs the console API"
+)]
+mod console;
+#[cfg(windows)]
+mod host;
 #[cfg(unix)]
 mod launch;
-#[cfg(unix)]
 mod mods;
-#[cfg(unix)]
+#[cfg(windows)]
+mod service;
 mod settings;
-#[cfg(unix)]
 mod steamcmd;
 
+use std::fs::File;
 use std::io::Write as _;
+use std::path::Path;
 use std::process::ExitCode;
+use std::sync::{Mutex, OnceLock};
 
-const USAGE: &str = "usage: enshwick-server [run | --version]";
+use settings::{Defaults, Layout, Settings};
+
+#[cfg(unix)]
+const USAGE: &str = "usage: enshwick-server [run] [NAME=value]... | --version";
+#[cfg(windows)]
+const USAGE: &str =
+    "usage: enshwick-server (run | install) [NAME=value]... | uninstall | --version";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    match args
-        .iter()
-        .map(String::as_str)
-        .collect::<Vec<_>>()
-        .as_slice()
-    {
-        [] | ["run"] => match run() {
-            Ok(code) => code,
-            Err(error) => {
-                say(&format!("error: {error}"));
-                ExitCode::FAILURE
-            }
-        },
-        ["--version"] => {
+    let (command, rest) = match args.split_first() {
+        Some((command, rest)) if !command.contains('=') => (command.as_str(), rest),
+        _ => ("run", args.as_slice()),
+    };
+    let result = match command {
+        "run" => run(rest),
+        "--version" => {
             say(concat!("enshwick-server ", env!("CARGO_PKG_VERSION")));
-            ExitCode::SUCCESS
+            Ok(ExitCode::SUCCESS)
         }
-        _ => {
-            say(USAGE);
-            ExitCode::FAILURE
-        }
-    }
+        #[cfg(windows)]
+        "install" => service::install(rest),
+        #[cfg(windows)]
+        "uninstall" if rest.is_empty() => service::uninstall(),
+        #[cfg(windows)]
+        "service" => service::dispatch(rest),
+        _ => Err(USAGE.to_owned()),
+    };
+    result.unwrap_or_else(|error| {
+        say(&format!("error: {error}"));
+        ExitCode::FAILURE
+    })
 }
 
-#[cfg(unix)]
-fn run() -> Result<ExitCode, String> {
-    // First, so a stop during the update is not lost.
-    let stop = launch::stop_flag()?;
-    let settings = settings::Settings::from_env(|name| std::env::var(name).ok())?;
+/// Reads the settings from `args` and the environment.
+fn settings(args: &[String]) -> Result<Settings, String> {
+    Settings::read(&Defaults::here()?, args, |name| std::env::var(name).ok())
+}
+
+/// Updates the server and installs the loader, the mods and the
+/// configuration: everything before the server starts.
+///
+/// # Errors
+///
+/// The step that failed.
+fn prepare(settings: &Settings) -> Result<Layout, String> {
     let layout = settings.layout();
     layout.create()?;
-    steamcmd::prepare(&settings, &layout)?;
-    mods::install(&layout.bundle, &layout.server, &settings.mods)?;
+    steamcmd::prepare(settings, &layout)?;
+    mods::install(&layout.bundle, &layout.server(), &settings.mods)?;
     if let Some(patch) = &settings.server_config {
         config::apply(&layout.server_config(), patch)?;
     }
+    Ok(layout)
+}
+
+#[cfg(unix)]
+fn run(args: &[String]) -> Result<ExitCode, String> {
+    // First, so a stop during the update is not lost.
+    let stop = launch::stop_flag()?;
+    let settings = settings(args)?;
+    let layout = prepare(&settings)?;
     launch::run(&settings, &layout, &stop)
 }
 
-#[cfg(not(unix))]
-fn run() -> Result<ExitCode, String> {
-    Err("`run` starts the server in the Linux image; it does not run on this system".to_owned())
+#[cfg(windows)]
+fn run(args: &[String]) -> Result<ExitCode, String> {
+    let layout = prepare(&settings(args)?)?;
+    host::run_foreground(&layout)
 }
 
-/// Writes one line for the person reading the container's log.
+/// Where [`say`] also writes, such as the Windows service's log.
+static LOG: OnceLock<Mutex<File>> = OnceLock::new();
+
+/// Makes [`say`] append to `path` as well.
+#[cfg_attr(
+    unix,
+    expect(dead_code, reason = "only the Windows service has no console")
+)]
+fn log_to_file(path: &Path) {
+    if let Ok(file) = File::options().create(true).append(true).open(path) {
+        let _first = LOG.set(Mutex::new(file));
+    }
+}
+
+/// Writes one line for the person reading the log.
 fn say(text: &str) {
-    let _shown = writeln!(std::io::stderr(), "enshwick-server: {text}");
+    let line = format!("enshwick-server: {text}\n");
+    let _shown = std::io::stderr().write_all(line.as_bytes());
+    if let Some(Ok(mut file)) = LOG.get().map(Mutex::lock) {
+        let _logged = file.write_all(line.as_bytes());
+    }
 }

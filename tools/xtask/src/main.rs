@@ -7,10 +7,12 @@
 //! formatting, rustdoc and cargo-deny.
 //!
 //! `cargo xtask image` builds the Linux image without a container engine
-//! (see [`image`]).
+//! (see [`image`]); `cargo xtask dist` builds the Windows archive (see
+//! [`dist`]).
 
 #![forbid(unsafe_code)]
 
+mod dist;
 mod image;
 
 use std::io::Write as _;
@@ -19,7 +21,8 @@ use std::thread;
 use std::time::Instant;
 
 const USAGE: &str = "usage: cargo xtask check [--all] [--base <git ref>] \
-                     | cargo xtask image [--tag <reference>]... [--output <file>] [--digest-file <file>] [--loader <zip>]";
+                     | cargo xtask image [--tag <reference>]... [--output <file>] [--digest-file <file>] [--loader <zip>] \
+                     | cargo xtask dist [--out <dir>] [--loader <zip>]";
 const WINDOWS_TARGET: &str = "x86_64-pc-windows-msvc";
 
 fn main() -> ExitCode {
@@ -38,6 +41,7 @@ fn run(args: &[String]) -> Result<bool, String> {
     let (task, rest) = args.split_first().ok_or(USAGE)?;
     match task.as_str() {
         "image" => image::run(rest).map(|()| true),
+        "dist" => dist::run(rest).map(|()| true),
         "check" => {
             let mut all = false;
             let mut rest = rest.iter();
