@@ -1,0 +1,25 @@
+# An Enshrouded server with the Enshwick loader: `docker compose up -d`.
+# The first start downloads the game (several GB) into the `data` volume.
+services:
+  server:
+    image: ghcr.io/enshwick/dedicated-server:edge
+    restart: unless-stopped
+    # The server saves on stop; give it the time.
+    stop_grace_period: 90s
+    ports:
+      - "15637:15637/udp"
+    environment:
+      # Bundled mods to turn on, by name; an empty value runs the loader alone.
+      ENSHWICK_MODS: optimizer
+      # Merged into enshrouded_server.json before every start.
+      ENSHWICK_SERVER_CONFIG: '{"name": "My modded server", "slotCount": 8}'
+    volumes:
+      - data:/data
+    # On Linux 6.14 or newer with the ntsync module loaded (`modprobe
+    # ntsync`), uncomment these two lines: Wine waits through /dev/ntsync for
+    # less CPU.
+    # devices:
+    #   - /dev/ntsync:/dev/ntsync
+
+volumes:
+  data:

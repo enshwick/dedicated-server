@@ -1,0 +1,12 @@
+{
+  "name": "dedicated-server-repository-tools",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prepare": "lefthook install"
+  },
+  "devDependencies": {
+    "lefthook": "2.2.2",
+    "markdownlint-cli2": "0.24.0"
+  }
+}

@@ -1,0 +1,7 @@
+[toolchain]
+channel = "1.99.1"
+components = ["rustfmt", "clippy"]
+# The setup program runs on Windows; the image's launcher is a static Linux
+# binary, so it runs on any base image.
+targets = ["x86_64-pc-windows-msvc", "x86_64-unknown-linux-musl"]
+profile = "minimal"

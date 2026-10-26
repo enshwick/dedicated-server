@@ -1,0 +1,37 @@
+# The merge gate: `cargo xtask check` on the organization runners through the
+# shared workflow, on every pull request that touches the code, and the full
+# suite nightly.
+name: ci
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "tools/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - ".cargo/**"
+      - "clippy.toml"
+      - "rustfmt.toml"
+      - "deny.toml"
+      - "image.toml"
+      - ".github/workflows/ci.yml"
+  schedule:
+    - cron: "41 2 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust:
+    # main: the organization runners run only workflows from main.
+    uses: enshwick/.github/.github/workflows/rust-ci.yml@main # zizmor: ignore[unpinned-uses]
+    with:
+      windows-tests: false
+    permissions:
+      contents: read

@@ -1,0 +1,42 @@
+# ghcr.io/enshwick/dedicated-server: pushed from main when what goes into the
+# image changes, and nightly, which picks up the loader's newest build. A
+# pull request that changes how the image is built only builds it.
+name: image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "tools/xtask/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "image.toml"
+      - ".github/workflows/image.yml"
+  pull_request:
+    paths:
+      - "tools/xtask/src/image.rs"
+      - "image.toml"
+      - ".github/workflows/image.yml"
+  schedule:
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: image-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  image:
+    # main: the organization runners run only workflows from main.
+    uses: enshwick/.github/.github/workflows/container-image.yml@main # zizmor: ignore[unpinned-uses]
+    with:
+      push: ${{ github.event_name != 'pull_request' }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
