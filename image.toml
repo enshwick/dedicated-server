@@ -7,8 +7,8 @@ base = "docker.io/steamcmd/steamcmd:debian-trixie@sha256:5e11e4eb202528a48d8f038
 
 # The Proton build whose Wine runs the server.
 [proton]
-version = "GE-Proton11-9"
-url = "https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton11-9/GE-Proton11-9-x86_64.tar.gz"
+version = "GE-Proton11-11"
+url = "https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton11-11/GE-Proton11-11-x86_64.tar.gz"
 sha512 = "30160946a5e4ffdf1f29d6f83a3d27108f6aa71b6aa59095b2c2260fe3a003b62acf8fdcb02a3dfc602b28473f5679d8a3eaee5a8adb141c1dfa01c42888da2d"
 # Left out, relative to the archive's top folder: the .NET and HTML engines,
 # the fonts, the speech and text data, and the prefix template, none of
